@@ -10,9 +10,6 @@ your_port = "xxxx" # change with your port
 
 node = nbiot.NBIoT()
 
-node.disable()
-node.enable()
-
 node.sendATComm("ATE1","OK\r\n")
 
 node.getIMEI()

@@ -59,10 +59,7 @@ class NBIoT:
 	port_number = "" # port number 
 	timeout = TIMEOUT # default timeout for function and methods on this library.
 	
-	SCRAMBLE_ON = "0"
-	SCRAMBLE_OFF = "1"
-	
-	def __init__(self, serial_port="/dev/ttyS0", serial_baudrate=115200, board="Sixfab NB IoT Shield"):
+	def __init__(self, serial_port="/dev/ttyS0", serial_baudrate=9600, board="Sixfab NB-IoT Shield"):
 		
 		self.board = board
     	
@@ -74,19 +71,9 @@ class NBIoT:
 		
 		GPIO.setmode(GPIO.BCM)
 		GPIO.setwarnings(False)
-		GPIO.setup(BC95_ENABLE, GPIO.OUT)
 			
 		debug_print(self.board + " Class initialized!")
- 
-	def enable(self):
-		GPIO.output(BC95_ENABLE,1)
-		debug_print("BC95 module enabled!")
-
-	# power down BC95 module and all peripherals from voltage regulator 
-	def disable(self):
-		GPIO.output(BC95_ENABLE,0)
-		debug_print("BC95 module disabled!")
-		
+ 		
 	# send at comamand to module
 	def sendATCommOnce(self, command):
 		if (ser.isOpen() == False):
@@ -120,9 +107,8 @@ class NBIoT:
 	def resetModule(self):
 		self.saveConfigurations()
 		delay(200)
-		self.disable()
-		delay(200)
-		self.enable()
+		self.sendATComm("AT+NRB","")
+
 
 	# Function for save configurations tShield be done in current session. 
 	def saveConfigurations(self):

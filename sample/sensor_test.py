@@ -8,9 +8,6 @@ import time
 
 node = nbiot.NBIoT()
 
-node.disable()
-node.enable()
-
 time.sleep(0.5)
 print("Acceleration: "+str(node.readAccel()))
 time.sleep(0.5)
