@@ -1,4 +1,4 @@
-# Sixfab_RPi_NBIoT_Library
+# Sixfab Raspberry Pi NBIoT Shield
 It is repository of python library for [Sixfab Raspberry Pi NB-IoT Shield](https://sixfab.com/product/raspberry-pi-nb-iot-shield/).
 
 # Library Installation
