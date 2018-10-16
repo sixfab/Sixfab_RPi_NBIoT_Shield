@@ -2,6 +2,7 @@
   basicUDP.py - This is basic UDP example.
   Created by Yasin Kaya (selengalp), September 19, 2018.
 '''
+
 from nbiot import nbiot
 import time
 
@@ -11,6 +12,9 @@ your_port = "xxxx" # change with your port
 node = nbiot.NBIoT()
 
 node.sendATComm("ATE1","OK\r\n")
+
+node.setScrambleConf(node.SCRAMBLE_ON)
+node.setAutoConnectConf(node.AUTO_ON)
 
 node.getIMEI()
 time.sleep(0.5)
