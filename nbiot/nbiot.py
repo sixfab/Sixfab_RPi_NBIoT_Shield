@@ -23,12 +23,6 @@ OPTO2 = 5
 VDD_EXT = 6
 LUX_CHANNEL = 0
 
-SCRAMBLE_ON = "TRUE"
-SCRAMBLE_OFF = "FALSE"
-
-AUTO_ON = "TRUE"
-AUTO_OFF = "FALSE"
-
 # global variables
 TIMEOUT = 3 # seconds
 ser = serial.Serial()
@@ -53,11 +47,17 @@ def delay(ms):
 ### NB IoT Shield Class ################
 ###########################################	
 class NBIoT:
-	board = "" # Shield name (NB IoT or NB IoT App.)
+	board = "" # Shield name
 	ip_address = "" # ip address       
 	domain_name = "" # domain name   
 	port_number = "" # port number 
 	timeout = TIMEOUT # default timeout for function and methods on this library.
+	
+	SCRAMBLE_ON = "TRUE"
+	SCRAMBLE_OFF = "FALSE"
+
+	AUTO_ON = "TRUE"
+	AUTO_OFF = "FALSE"
 	
 	def __init__(self, serial_port="/dev/ttyS0", serial_baudrate=9600, board="Sixfab NB-IoT Shield"):
 		
@@ -71,7 +71,10 @@ class NBIoT:
 		
 		GPIO.setmode(GPIO.BCM)
 		GPIO.setwarnings(False)
-			
+		
+		GPIO.setup(RESET,GPIO.OUT)
+		GPIO.output(RESET,GPIO.LOW)
+		
 		debug_print(self.board + " Class initialized!")
  		
 	# send at comamand to module
@@ -81,7 +84,7 @@ class NBIoT:
 		compose = ""
 		compose = "\r\n" + str(command) + "\r\n"
 		ser.reset_input_buffer()
-		ser.write(compose.encode())
+		ser.write(compose.encode('utf-8'))
 		debug_print(compose)
 
 	# function for sending at command to BC95_AT.
@@ -97,7 +100,9 @@ class NBIoT:
 			
 			response =""
 			while(ser.inWaiting()):
+				delay(100)
 				response += ser.read(ser.inWaiting()).decode('utf-8')
+				#debug_print(response)
 			if(response.find(desired_response) != -1):
 				debug_print(response)
 				ser.close()
@@ -116,7 +121,7 @@ class NBIoT:
 
 	# Function for getting IMEI number
 	def getIMEI(self):
-		return self.sendATComm("AT+CGSN","OK\r\n")
+		return self.sendATComm("AT+CGSN=1","OK\r\n")
 
 
 	# Function for getting firmware info
@@ -129,14 +134,14 @@ class NBIoT:
 
 	# Function for setting autoconnect feature configuration 
 	def setAutoConnectConf(self, autoconnect):
-		compose = "AT+QCFG=AUTOCONNECT,"
+		compose = "AT+NCONFIG=AUTOCONNECT,"
 		compose += autoconnect
 
 		self.sendATComm(compose,"OK\r\n")
 
 	# Function for setting scramble feature configuration 
 	def setScrambleConf(self, scramble):
-		compose = "AT+QCFG=CR_0354_0338_SCRAMBLING,"
+		compose = "AT+NCONFIG=CR_0354_0338_SCRAMBLING,"
 		compose += scramble
 
 		self.sendATComm(compose,"OK\r\n")
@@ -185,8 +190,8 @@ class NBIoT:
 	# connect to base station of operator
 	def connectToOperator(self):
 		debug_print("Trying to connect base station of operator...")
-		self.sendATComm("AT+CGATT=1","OK\r\n")
-		delay(500)
+		#self.sendATComm("AT+CGATT=1","OK")
+		#delay(500)
 		self.sendATComm("AT+CGATT?","+CGATT:1\r\n")
 
 		self.getSignalQuality()
