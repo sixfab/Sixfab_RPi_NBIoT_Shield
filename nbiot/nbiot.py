@@ -53,12 +53,16 @@ class NBIoT:
 	port_number = "" # port number 
 	timeout = TIMEOUT # default timeout for function and methods on this library.
 	
+	compose = ""
+	response = ""
+
 	SCRAMBLE_ON = "TRUE"
 	SCRAMBLE_OFF = "FALSE"
 
 	AUTO_ON = "TRUE"
 	AUTO_OFF = "FALSE"
 	
+	# Default Initializer
 	def __init__(self, serial_port="/dev/ttyS0", serial_baudrate=9600, board="Sixfab NB-IoT Shield"):
 		
 		self.board = board
@@ -76,39 +80,65 @@ class NBIoT:
 		GPIO.output(RESET,GPIO.LOW)
 		
 		debug_print(self.board + " Class initialized!")
- 		
-	# send at comamand to module
+	
+	# Function for clearing compose variable
+	def clear_compose(self):
+		self.compose = ""
+		
+	# Function for getting modem response
+	def getResponse(self, desired_response):
+		if (ser.isOpen() == False):
+			ser.open()
+			
+		while 1:	
+			self.response =""
+			while(ser.inWaiting()):
+				self.response += ser.read(ser.inWaiting()).decode('utf-8', errors='ignore')
+			if(self.response.find(desired_response) != -1):
+				debug_print(self.response)
+				break
+				
+	# Function for sending at comamand to module
 	def sendATCommOnce(self, command):
 		if (ser.isOpen() == False):
 			ser.open()		
-		compose = ""
-		compose = "\r\n" + str(command) + "\r\n"
+		self.compose = ""
+		self.compose = str(command) + "\r"
 		ser.reset_input_buffer()
-		ser.write(compose.encode('utf-8'))
-		debug_print(compose)
+		ser.write(self.compose.encode())
+		debug_print(self.compose)
 
-	# function for sending at command to BC95_AT.
-	def sendATComm(self, command, desired_response):
+	# Function for sending at command to BC95_AT.
+	def sendATComm(self, command, desired_response, timeout = None):
 		
+		if timeout is None:
+			timeout = self.timeout
+			
 		self.sendATCommOnce(command)
+		
+		f_debug = False
 		
 		timer = millis()
 		while 1:
-			if( millis() - timer > self.timeout): 
+			if( millis() - timer > timeout): 
 				self.sendATCommOnce(command)
 				timer = millis()
+				f_debug = False
 			
-			response =""
+			self.response =""
 			while(ser.inWaiting()):
-				delay(100)
-				response += ser.read(ser.inWaiting()).decode('utf-8')
-				#debug_print(response)
-			if(response.find(desired_response) != -1):
-				debug_print(response)
-				ser.close()
+				try: 
+					self.response += ser.read(ser.inWaiting()).decode('utf-8', errors='ignore')
+					delay(100)
+				except Exception as e:
+					debug_print(e.Message)
+				# debug_print(self.response)
+					
+			if(self.response.find(desired_response) != -1):
+				debug_print(self.response)
 				break
 
-	# function for saving conf. and reset BC95_AT module
+	# Function for saving conf. and reset BC95_AT module
 	def resetModule(self):
 		self.saveConfigurations()
 		delay(200)
@@ -134,47 +164,49 @@ class NBIoT:
 
 	# Function for setting autoconnect feature configuration 
 	def setAutoConnectConf(self, autoconnect):
-		compose = "AT+NCONFIG=AUTOCONNECT,"
-		compose += autoconnect
+		self.compose = "AT+NCONFIG=AUTOCONNECT,"
+		self.compose += autoconnect
 
-		self.sendATComm(compose,"OK\r\n")
+		self.sendATComm(self.compose,"OK\r\n")
+		self.clear_compose()
 
 	# Function for setting scramble feature configuration 
 	def setScrambleConf(self, scramble):
-		compose = "AT+NCONFIG=CR_0354_0338_SCRAMBLING,"
-		compose += scramble
+		self.compose = "AT+NCONFIG=CR_0354_0338_SCRAMBLING,"
+		self.compose += scramble
 
-		self.sendATComm(compose,"OK\r\n")
+		self.sendATComm(self.compose,"OK\r\n")
+		self.clear_compose()
 
-	# function for getting self.ip_address
+	# Function for getting self.ip_address
 	def getIPAddress(self):
 		return self.ip_address
 
-	# function for setting self.ip_address
+	# Function for setting self.ip_address
 	def setIPAddress(self, ip):
 		self.ip_address = ip
 
-	# function for getting self.domain_name
+	# Function for getting self.domain_name
 	def getDomainName(self):
 		return self.domain_name
 
-	# function for setting domain name
+	# Function for setting domain name
 	def setDomainName(self, domain):
 		self.domain_name = domain
 
-	# function for getting port
+	# Function for getting port
 	def getPort(self):
 		return self.port_number
 
-	# function for setting port
+	# Function for setting port
 	def setPort(self, port):
 		self.port_number = port
 
-	# get timout in ms
+	# Function for getting timout in ms
 	def getTimeout(self):
 		return self.timeout
 
-	# set timeout in ms    
+	# Function for setting timeout in ms    
 	def setTimeout(self, new_timeout):
 		self.timeout = new_timeout
 
@@ -183,57 +215,60 @@ class NBIoT:
 	#*** Network Service Functions ************************************************************
 	#****************************************************************************************** 
 
-	# 
+	# Function for getting signal quality
 	def getSignalQuality(self):
 		return self.sendATComm("AT+CSQ","OK\r\n")
 
-	# connect to base station of operator
+	# Function for connecting to base station of operator
 	def connectToOperator(self):
 		debug_print("Trying to connect base station of operator...")
-		#self.sendATComm("AT+CGATT=1","OK")
-		#delay(500)
+		self.sendATComm("AT+CGATT=0","OK\r\n",8) # with 8 seconds timeout
+		delay(1000)
+		self.sendATComm("AT+CGATT=1","OK\r\n",8) # with 8 seconds timeout
+		delay(2000)
+		debug_print("Wait until getting <CGATT:1> response..." )
 		self.sendATComm("AT+CGATT?","+CGATT:1\r\n")
-
-		self.getSignalQuality()
 
 
 	#******************************************************************************************
 	#*** UDP Protocols Functions ********************************************************
 	#******************************************************************************************
 	
-	# function for connecting to server via UDP
+	# Function for connecting to server via UDP
 	def startUDPService(self):
 		port = "3005"
 
-		compose = "AT+NSOCR=DGRAM,17,"
-		compose += str(self.port_number)
-		compose += ",0"
+		self.compose = "AT+NSOCR=DGRAM,17,"
+		self.compose += str(self.port_number)
+		self.compose += ",0"
 
-		self.sendATComm(compose,"OK\r\n")
+		self.sendATComm(self.compose,"OK\r\n")
+		self.clear_compose()
 
-	# fuction for sending data via udp.
+	# Fuction for sending data via udp.
 	def sendDataUDP(self, data):
-		compose = "AT+NSOST=0,"
-		compose += str(self.ip_address)
-		compose += ","
-		compose += str(self.port_number)
-		compose += ","
-		compose += str(len(data))
-		compose += ","
-		compose += hex(data)
+		self.compose = "AT+NSOST=0,"
+		self.compose += str(self.ip_address)
+		self.compose += ","
+		self.compose += str(self.port_number)
+		self.compose += ","
+		self.compose += str(len(data))
+		self.compose += ","
+		self.compose += hex(data)
 
-		self.sendATComm(compose,"\r\n")
+		self.sendATComm(self.compose,"\r\n")
+		self.clear_compose()
 
-	#function for closing server connection
+	# Function for closing server connection
 	def closeConnection(self):
 		self.sendATComm("AT+NSOCL=0","\r\n")
 			
-	# 
+	# Function for reading accelerometer
 	def readAccel(self):
 		mma = MMA8452Q()
 		return mma.readAcc()
  
-	#
+	# Function for reading ADC
 	def readAdc(self, channelNumber):
 		''' Only use 0,1,2,3(channel Number) for readAdc(channelNumber) function '''
 		adc=ADS1015(address=0x49, busnum=1)
@@ -241,46 +276,46 @@ class NBIoT:
 		adcValues[channelNumber] = adc.read_adc(channelNumber, gain=1)
 		return adcValues[channelNumber]
 
-	#
+	# Function for reading temperature
 	def readTemp(self):
 		hdc1000 = SDL_Pi_HDC1000()
 		hdc1000.setTemperatureResolution(HDC1000_CONFIG_TEMPERATURE_RESOLUTION_14BIT)
 		return  hdc1000.readTemperature()
 
-	# 
+	# Function for reading humidity
 	def readHum(self):
 		hdc1000 = SDL_Pi_HDC1000()
 		hdc1000.setHumidityResolution(HDC1000_CONFIG_HUMIDITY_RESOLUTION_14BIT)
 		return hdc1000.readHumidity()
 
-	#	
+	# Function for reading light resolution	
 	def readLux(self):
 		adc=ADS1015(address=0x49, busnum=1)
 		rawLux = adc.read_adc(LUX_CHANNEL, gain=1)
 		lux = (rawLux * 100) / 1580
 		return lux
 
-	#
+	# Function for turning on relay
 	def turnOnRelay(self):
 		GPIO.setup(RELAY, GPIO.OUT)
 		GPIO.output(RELAY, 1)
 
-	#
+	# Function for turning off relay
 	def turnOffRelay(self):
 		GPIO.setup(RELAY, GPIO.OUT)
 		GPIO.output(RELAY, 0)
 
-	#
+	# Function for reading user button
 	def readUserButton(self):
 		GPIO.setup(USER_BUTTON, GPIO.IN)
 		return GPIO.input(USER_BUTTON)
 
-	#
+	# Function for turning on user LED
 	def turnOnUserLED(self):
 		GPIO.setup(USER_LED, GPIO.OUT)
 		GPIO.output(USER_LED, 1)
 
-	#
+	# Function for turning off user LED
 	def turnOffUserLED(self):
 		GPIO.setup(USER_LED, GPIO.OUT)
 		GPIO.output(USER_LED, 0)
