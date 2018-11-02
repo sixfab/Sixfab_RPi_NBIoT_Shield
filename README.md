@@ -9,6 +9,12 @@ cd Sixfab_RPi_NBIoT_Library
 sudo python3 setup.py install
 ```
 
+## Install with pip3
+Use pip3 to install from PyPI.
+```
+sudo pip3 install sixfab-nbiot
+```
+
 ## Test
 Enable `serial_hw` and `I2C` interfaces by following instructions below:  
 1. Run `sudo raspi-config`
