@@ -254,7 +254,7 @@ class NBIoT:
 		self.compose += ","
 		self.compose += str(len(data))
 		self.compose += ","
-		self.compose += hex(data)
+		self.compose += data.encode("utf-8").hex() #hex(data)
 
 		self.sendATComm(self.compose,"\r\n")
 		self.clear_compose()
